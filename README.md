@@ -2,7 +2,7 @@
 phpprobe探针  
 当前版本v1.2  
   
-项目主页：https://github.com/fbcha/phpprobe
+项目主页：https://github.com/fbcha/phpprobe  
 程序功能：探测web服务器运行环境  
 程序开发：浪子不归（fbcha or shooter）  
 联系方式：fbcha@163.com  
