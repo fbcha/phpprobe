@@ -497,8 +497,8 @@ function svr_winnt()
     }else if(function_exists('exec')){
         exec("wmic cpu get LoadPercentage,NumberOfCores,NumberOfLogicalProcessors,L2CacheSize", $cpuwmic);
         exec("wmic cpu get Name", $cpuname);
-        $cpuKey =  split(" +", $cpuwmic[0]);
-        $cpuValue =  split(" +", $cpuwmic[1]);
+        $cpuKey =  preg_split("/ +/", $cpuwmic[0]);
+        $cpuValue =  preg_split("/ +/", $cpuwmic[1]);
         foreach($cpuKey as $k=>$v)
         {
                 $cpuinfo[$v] = $cpuValue[$k];
@@ -515,7 +515,20 @@ function svr_winnt()
     $res['cpu']['model'] = $cpuinfo['Name'].' [二级缓存：'.$cache.']';
 
     // 获取服务器运行时间
-    $sysinfo = getWMI($wmi, "Win32_OperatingSystem", "LastBootUpTime,TotalVisibleMemorySize,FreePhysicalMemory");
+	if(get_cfg_var("com.allow_dcom"))
+	{
+		$sysinfo = getWMI($wmi, "Win32_OperatingSystem", "LastBootUpTime,TotalVisibleMemorySize,FreePhysicalMemory");
+	}else if(function_exists("exec")){
+		exec("wmic os get LastBootUpTime,TotalVisibleMemorySize,FreePhysicalMemory", $osInfo);
+		$osKey = preg_split("/ +/", $osInfo[0]);
+		$osValue = preg_split("/ +/", $osInfo[1]);
+		foreach($osKey as $key => $value)
+		{
+			$sysinfo[$value] = $osValue[$key];
+		}
+	}else{
+		return false;
+	}
 
     $res['uptime'] = $sysinfo['LastBootUpTime'];
     $str = time() - strtotime(substr($res['uptime'],0,14));
@@ -538,7 +551,20 @@ function svr_winnt()
     $res['mUsed'] = size_format($mUsed,1);
     $res['mPercent'] = round($mUsed / $mTotal * 100,1);
 
-    $swapinfo = getWMI($wmi,"Win32_PageFileUsage", 'AllocatedBaseSize,CurrentUsage');
+	if(get_cfg_var("com.allow_dcom"))
+	{
+		$swapinfo = getWMI($wmi,"Win32_PageFileUsage", 'AllocatedBaseSize,CurrentUsage');
+	}else if(function_exists("exec")){
+		exec("wmic pagefile get AllocatedBaseSize,CurrentUsage", $swaps);
+		$swapKey = preg_split("/ +/", $swaps[0]);
+		$swapValue = preg_split("/ +/", $swaps[1]);
+		foreach($swapKey as $sk => $sv)
+		{
+			$swapinfo[$sv] = $swapValue[$sk];
+		}
+	}else{
+		return false;
+	}
     $sTotal = $swapinfo['AllocatedBaseSize'] * 1024 * 1024;
     $sUsed = $swapinfo['CurrentUsage'] * 1024 * 1024;
     $sFree = $sTotal - $sUsed;
@@ -605,7 +631,7 @@ $hddPercent = (floatval($hddTotal)!=0) ? round($hddUsed/$hddTotal * 100, 2) : 0;
 
 if(filter_input(INPUT_GET, 'act') == 'rt' && $is_constantly)
 {
-    $res = [
+    $res = array(
         'currentTime' => $currentTime,
         'uptime' => $uptime,
         'cpuPercent' => $svrInfo['cpu']['percent'],
@@ -614,7 +640,6 @@ if(filter_input(INPUT_GET, 'act') == 'rt' && $is_constantly)
         'MemoryPercent' => $svrInfo['mPercent'],
         'MemoryCachedPercent' => $svrInfo['mCachedPercent'],
         'MemoryCached' => $svrInfo['mCached'],
-        'MemoryCachedPercent' => $svrInfo['mCachedPercent'],
         'MemoryRealUsed' => $svrInfo['mRealUsed'],
         'MemoryRealFree' => $svrInfo['mRealFree'],
         'MemoryRealPercent' => $svrInfo['mRealPercent'],
@@ -622,7 +647,7 @@ if(filter_input(INPUT_GET, 'act') == 'rt' && $is_constantly)
         'SwapFree' => $svrInfo['swapFree'],
         'SwapUsed' => $svrInfo['swapUsed'],
         'SwapPercent' => $svrInfo['swapPercent']
-    ];
+    );
     $jsonRes = json_encode($res);
     echo $_GET['callback'] . '(' . $jsonRes . ')';
     exit();
@@ -999,7 +1024,7 @@ if(filter_input(INPUT_GET, 'act') == 'rt' && $is_constantly)
                                     物理内存：共 <span id="MemoryTotal" class="red"><?php echo $svrInfo['mTotal']; ?></span>,
                                     已用 <span id="MemoryUsed" class="red"></span>,
                                     空闲 <span id="MemoryFree" class="red"></span> - 
-                                    <?php if ($svrInfo['swapTotal'] > 0){?>
+                                    <?php if ($svrInfo['sBool'] > 0){?>
                                     SWAP区：共 <span id="SwapTotal" class="red"><?php echo $svrInfo['swapTotal']; ?></span> , 
                                     已使用 <span id="SwapUsed" class="red"></span> ,
                                     空闲 <span id="SwapFree" class="red"></span>
@@ -1007,11 +1032,11 @@ if(filter_input(INPUT_GET, 'act') == 'rt' && $is_constantly)
                                 </div>
 				
                                 <div class="stxt">
-                                    <?php if($svrInfo['mRealUsed'] > 0){?>
+                                    <?php if($svrInfo['rBool'] > 0){?>
                                     真实内存使用 <span id="MemoryRealUsed" class="red"></span> ,
                                     真实内存空闲 <span id="MemoryRealFree" class="red"></span> - 
                                     <?php }?>
-                                    <?php if($svrInfo['mCached'] > 0){?>
+                                    <?php if($svrInfo['cBool'] > 0){?>
                                     Cache： <span id="MemoryCached" class="red"></span> | 
                                     Buffers缓冲为 <span id="Buffers" class="red"></span>
                                     <?php }?>
