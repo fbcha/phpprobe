@@ -188,6 +188,7 @@ switch (PHP_OS)
         $svrShow = (false !== $is_constantly) ? ((false !== ($svrInfo = svr_darwin())) ? "show" : "none") : "none";
         break;
     case "WINNT":
+        $is_constantly = false;
         $svrShow = (false !== $is_constantly) ? ((false !== ($svrInfo = svr_winnt())) ? "show" : "none") : "none";
         break;
     default :
