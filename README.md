@@ -10,6 +10,14 @@ phpprobe探针
 
 phpprobe探针用于探测web运行环境、php信息，查看服务器IP地址，服务器硬盘资源，内存占用，cpu等信息。支持Linux，FreeBSD，Windows，OS X平台。
   
+GitHub：https://github.com/fbcha/phpprobe/releases  
+  
+Git@OSC: http://git.oschina.net/fbcha/phpprobe/releases  
+  
+百度网盘：https://pan.baidu.com/s/1c2tBGMO  
+  
+ChinaZ：http://down.chinaz.com/soft/38362.htm  
+  
 更新记录：  
 2016-11-08  
 1、增加打开关闭实时信息的显示  
