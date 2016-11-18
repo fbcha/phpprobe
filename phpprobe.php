@@ -4,6 +4,7 @@
  * 程序功能: 探测系统的Web服务器运行环境
  * 程序开发: 浪子不归(fbcha)
  * 联系方式: fbcha@163.com
+ * 项目主页: https://github.com/fbcha/phpprobe
  * 博   客: https://my.oschina.net/fbcha/blog
  * Date: 2016-09-18
  * Update: 2016-11-08
@@ -11,7 +12,7 @@
 error_reporting(0);
 $title = "PHPProbe探针 ";
 $name = "PHPProbe探针 ";
-$version = "v1.2";
+$version = "v1.3";
 
 $is_constantly = true; // 是否开启实时信息, false - 关闭, true - 开启
 
@@ -618,6 +619,89 @@ function size_format($bytes, $decimals = 2)
     return false;
 }
 
+// 服务器测试
+$server_testinfo = array(
+    'fbcha' => array(
+        'name' => '作者电脑',
+        'url' => '',
+        'logo' => '',
+        'intData' => '0.108秒',
+        'floatData' => '0.328秒',
+        'ioData' => '0.016秒',
+        'cpuData' => 'Core(TM) i3-3220 CPU @ 3.30GHz x 2'
+    )
+);
+function getTest($val)
+{
+    $out = '';
+    
+    if($val === 'intData'){
+	$timeStart = gettimeofday();
+        
+	for($i = 0; $i < 3000000; $i++)
+	{
+            $t = 1+1;
+	}
+
+	$timeEnd = gettimeofday();
+	$time = ($timeEnd["usec"] - $timeStart["usec"]) / 1000000 + $timeEnd["sec"] - $timeStart["sec"];
+	$out = round($time, 3)."秒";
+    }else if($val === 'floatData'){
+	$t = pi();
+	$timeStart = gettimeofday();
+
+	for($i = 0; $i < 3000000; $i++)
+	{
+            sqrt($t);
+	}
+
+        $timeEnd = gettimeofday();
+	$time = ($timeEnd["usec"] - $timeStart["usec"]) / 1000000 + $timeEnd["sec"] - $timeStart["sec"];
+	$out = round($time, 3)."秒";
+    }else if($val === 'ioData'){
+        $fp = fopen(PHPPROBE, 'r');
+        
+        $timeStart = gettimeofday();
+        
+        for($i = 0; $i < 10000; $i++) {
+            fread($fp, 10240);
+            rewind($fp);
+        }
+        
+        $timeEnd = gettimeofday();
+        fclose($fp);
+        $time = ($timeEnd["usec"] - $timeStart["usec"]) / 1000000 + $timeEnd["sec"] - $timeStart["sec"];
+        $out = round($time, 3)."秒";
+    }else{
+        $out = "参数错误!";
+    }
+    return $out;
+}
+function getSvrTestUrl($val)
+{
+    $out = $logo = $name = '';
+    $val['logo'] && $logo = '<img class="svr-logo" src="'.$val['logo'].'" />';
+    $name = $val['logo'] ? '<div class="svr-logo-text">'.$val['name'].'</div>' : $val['name'];
+    if($val['url'])
+    {
+        $out = '<a href="'.$val['url'].'"  target="_blank">'.$logo.$name.'</a>';
+    }else{
+        $out = $logo.$name;
+    }
+    return $out;
+}
+if(filter_input(INPUT_GET, 'act') == 'st')
+{
+    $sts = array(
+        'intData' => getTest('intData'),
+        'floatData' => getTest('floatData'),
+        'ioData' => getTest('ioData')
+    );
+    $stJsonRes = json_encode($sts);
+    echo filter_input(INPUT_GET, 'callback') . '(' . $stJsonRes . ')';
+    exit();
+}
+
 if($is_constantly)
 {
     $currentTime = date("Y-m-d H:i:s");
@@ -650,7 +734,7 @@ if(filter_input(INPUT_GET, 'act') == 'rt' && $is_constantly)
         'SwapPercent' => $svrInfo['swapPercent']
     );
     $jsonRes = json_encode($res);
-    echo $_GET['callback'] . '(' . $jsonRes . ')';
+    echo filter_input(INPUT_GET, 'callback') . '(' . $jsonRes . ')';
     exit();
 }
 ?>
@@ -664,252 +748,274 @@ if(filter_input(INPUT_GET, 'act') == 'rt' && $is_constantly)
         <script type="text/javascript" src="http://g.alicdn.com/sj/lib/jquery.min.js"></script>
         <script type="text/javascript" src="http://g.alicdn.com/sj/dpl/1.5.1/js/sui.min.js"></script>
         <script type="text/javascript" src="//cdn.bootcss.com/echarts/3.2.3/echarts.min.js"></script>
-        <style>
+        <style type="text/css">
             body{font-size: 1.25vw;}
             .stxt{font-size: 1vw;color: #666;}
             .footer{margin-top: 20px;border-top: 3px #ccc solid;padding: 20px; text-align: center;}
             .ext-tag-font li{font-size: 1.1vw;}
             .beta{font-size: 1vw;color: #ccc}
             .red{color:#CC0000;}
+            td.text-center{text-align: center;}
+            .svr-logo, .svr-logo-text{padding: 10px;}
         </style>
-        <?php if($svrShow == 'show') {?>
         <script type="text/javascript">
-        $(document).ready(function () {
-                getRealTime();
-                getCpuStatus();
-                getMemory();
-                getHdd();
+            $(document).ready(function () {
+                getServerTest();
+                <?php if($svrShow === 'show'){ ?>
+                    getRealTime();
+                    getCpuStatus();
+                    getMemory();
+                    getHdd();
+                <?php }?>
             });
-            function size_format(bytes, decimals=4)
-            {
-                if (bytes === 0) return '0 B';  
-
-                var k = 1024;  
-                sizes = ['B','KB', 'MB', 'GB', 'TB', 'PB', 'EB', 'ZB', 'YB'];  
-                i = Math.floor(Math.log(bytes) / Math.log(k));
-                
-                return (bytes / Math.pow(k, i)).toPrecision(decimals) + ' ' + sizes[i];
-            }
-            function getRealTime() {
-                setTimeout("getRealTime()", 1000);
-                var $rtArr = [
-                    'currentTime',
-                    'uptime',
-                    'MemoryUsed',
-                    'MemoryFree',
-                    'MemoryCached',
-                    'MemoryRealUsed',
-                    'MemoryRealFree',
-                    'Buffers',
-                    'SwapFree',
-                    'SwapUsed'
-                ];
-                $.getJSON("?act=rt&callback=?", function (data) {
-                    for(var i=0; i < $rtArr.length; i++)
-                    {
-                        var item = $rtArr[i];
-                        $("#"+item).html(data[item]);
-                    }
-                });
-            }
-            function getMemory()
-            {
-                var myChart = echarts.init(document.getElementById('main'));
-                
-                var memory_type = ['物理内存', 'Cache', '真实内存', 'SWAP'];
-                var is_memory = ["<?php echo $svrInfo['mBool']; ?>", "<?php echo $svrInfo['cBool']; ?>", "<?php echo $svrInfo['rBool']; ?>", "<?php echo $svrInfo['sBool']; ?>"];
-                var percent = ['MemoryPercent', 'MemoryCachedPercent', 'MemoryRealPercent', 'SwapPercent'];
-                var options = [];
-                var centers = 15;
-                for(var i=0;i<memory_type.length;i++)
+            <?php if($svrShow === 'show'){ ?>
+                function size_format(bytes, decimals=4)
                 {
-                    if(is_memory[i]){
-                        options[i] = {
-                            name: memory_type[i],
-                            type: 'gauge',
-                            radius: '80%',
-                            center: [centers + '%', '50%'],
-                            axisLine: {
-                                show: true,
-                                lineStyle: {
-                                    width: 10
-                                }
-                            },
+                    if (bytes === 0) return '0 B';  
+
+                    var k = 1024;  
+                    sizes = ['B','KB', 'MB', 'GB', 'TB', 'PB', 'EB', 'ZB', 'YB'];  
+                    i = Math.floor(Math.log(bytes) / Math.log(k));
+
+                    return (bytes / Math.pow(k, i)).toPrecision(decimals) + ' ' + sizes[i];
+                }
+                function getRealTime() {
+                    setTimeout("getRealTime()", 1000);
+                    var $rtArr = [
+                        'currentTime',
+                        'uptime',
+                        'MemoryUsed',
+                        'MemoryFree',
+                        'MemoryCached',
+                        'MemoryRealUsed',
+                        'MemoryRealFree',
+                        'Buffers',
+                        'SwapFree',
+                        'SwapUsed'
+                    ];
+                    $.getJSON("?act=rt&callback=?", function (data) {
+                        for(var i=0; i < $rtArr.length; i++)
+                        {
+                            var item = $rtArr[i];
+                            $("#"+item).html(data[item]);
+                        }
+                    });
+                }
+                function getMemory()
+                {
+                    var myChart = echarts.init(document.getElementById('main'));
+
+                    var memory_type = ['物理内存', 'Cache', '真实内存', 'SWAP'];
+                    var is_memory = ["<?php echo $svrInfo['mBool']; ?>", "<?php echo $svrInfo['cBool']; ?>", "<?php echo $svrInfo['rBool']; ?>", "<?php echo $svrInfo['sBool']; ?>"];
+                    var percent = ['MemoryPercent', 'MemoryCachedPercent', 'MemoryRealPercent', 'SwapPercent'];
+                    var options = [];
+                    var centers = 15;
+                    for(var i=0;i<memory_type.length;i++)
+                    {
+                        if(is_memory[i]){
+                            options[i] = {
+                                name: memory_type[i],
+                                type: 'gauge',
+                                radius: '80%',
+                                center: [centers + '%', '50%'],
+                                axisLine: {
+                                    show: true,
+                                    lineStyle: {
+                                        width: 10
+                                    }
+                                },
+                                splitLine: {
+                                    show: true,
+                                    length: '15%'
+                                },
+                                axisTick: {
+                                    show: true,
+                                    length: '10%'
+                                },
+                                axisLabel: {
+                                    show: true,
+                                    textStyle: {
+                                        fontSize: 9
+                                    }
+                                },
+                                detail: {
+                                    show: true,
+                                    formatter:'{value}%',
+                                    offsetCenter: ['0', '65%'],
+                                    textStyle: {
+                                        fontSize: '14'
+                                    }
+                                },
+                                pointer: {
+                                    width: 5
+                                },
+                                data: [{value: 50, name: memory_type[i]}]
+                            };
+                            centers = centers + 23;
+                        }else{
+                            options[i] = "";
+                        }
+                    }
+
+                    var option = {
+                        tooltip : {
+                            formatter: "{a} <br/>{b} : {c}%"
+                        },
+                        series: options
+                    };
+
+                    timeTicket = setInterval(function () {
+                        $.getJSON("?act=rt&callback=?", function (data) {
+                            for (var i=0; i<percent.length; i++)
+                            {
+                                if(data[percent[i]] !== null) option.series[i].data[0].value = data[percent[i]];
+                            }
+                        });
+                        myChart.setOption(option, true);
+                    }, 1000);
+                }
+                // cpu使用率
+
+                function getCpuStatus()
+                {
+                    var cpuChart = echarts.init(document.getElementById('cpustatus'));
+
+                    var data = [];
+                    var time = [];
+                    var _data = [];
+                    var cpuPercent = 0;
+                    var now = +new Date();
+
+                    function randomData()
+                    {
+                        now = new Date(+now + 1000);
+                        time = (now).getTime();
+                        $.getJSON("?act=rt&callback=?", function (d) {
+                            cpuPercent = d['cpuPercent'];
+                        });
+                        _data = {
+                            name: time,
+                            value: [
+                                time,
+                                cpuPercent
+                            ]
+                        };
+                        return _data;
+                    }
+
+                    for (var i = 0; i < 60; i++) {
+                        data.push(randomData());
+                    }
+
+                    var option = {
+                        title: {
+                            show: true,
+                            text: 'CPU使用率',
+                            left: 'center'
+                        },
+                        xAxis: {
+                            type : 'time',
                             splitLine: {
-                                show: true,
-                                length: '15%'
-                            },
-                            axisTick: {
-                                show: true,
-                                length: '10%'
+                                show: false
+                            }
+                        },
+                        yAxis: {
+                            type: 'value',
+                            boundaryGap: [0, '100%'],
+                            max: 100,
+                            splitLine: {
+                                show: true
                             },
                             axisLabel: {
-                                show: true,
-                                textStyle: {
-                                    fontSize: 9
-                                }
-                            },
-                            detail: {
-                                show: true,
-                                formatter:'{value}%',
-                                offsetCenter: ['0', '65%'],
-                                textStyle: {
-                                    fontSize: '14'
-                                }
-                            },
-                            pointer: {
-                                width: 5
-                            },
-                            data: [{value: 50, name: memory_type[i]}]
-                        };
-                        centers = centers + 23;
-                    }else{
-                        options[i] = "";
-                    }
-                }
-                
-                var option = {
-                    tooltip : {
-                        formatter: "{a} <br/>{b} : {c}%"
-                    },
-                    series: options
-                };
-
-                timeTicket = setInterval(function () {
-                    $.getJSON("?act=rt&callback=?", function (data) {
-                        for (var i=0; i<percent.length; i++)
-                        {
-                            if(data[percent[i]] !== null) option.series[i].data[0].value = data[percent[i]];
-                        }
-                    });
-                    myChart.setOption(option, true);
-                }, 1000);
-            }
-            // cpu使用率
-
-            function getCpuStatus()
-            {
-                var cpuChart = echarts.init(document.getElementById('cpustatus'));
-                
-                var data = [];
-                var time = [];
-                var _data = [];
-                var cpuPercent = 0;
-                var now = +new Date();
-
-                function randomData()
-                {
-                    now = new Date(+now + 1000);
-                    time = (now).getTime();
-                    $.getJSON("?act=rt&callback=?", function (d) {
-                        cpuPercent = d['cpuPercent'];
-                    });
-                    _data = {
-                        name: time,
-                        value: [
-                            time,
-                            cpuPercent
-                        ]
-                    };
-                    return _data;
-                }
-
-                for (var i = 0; i < 60; i++) {
-                    data.push(randomData());
-                }
-                
-                var option = {
-                    title: {
-                        show: true,
-                        text: 'CPU使用率',
-                        left: 'center'
-                    },
-                    xAxis: {
-                        type : 'time',
-                        splitLine: {
-                            show: false
-                        }
-                    },
-                    yAxis: {
-                        type: 'value',
-                        boundaryGap: [0, '100%'],
-                        max: 100,
-                        splitLine: {
-                            show: true
+                                formatter: '{value} %'
+                            }
                         },
-                        axisLabel: {
-                            formatter: '{value} %'
-                        }
-                    },
-                    series: [{
-                        name: 'CPU使用率',
-                        type: 'line',
-                        showSymbol: false,
-                        hoverAnimation: false,
-                        data: data
-                    }]
-                };
-                cpuChart.setOption(option);
-                timeTicket = setInterval(function () {
-                    data.shift();
-                    data.push(randomData());
-
-                    cpuChart.setOption({
                         series: [{
+                            name: 'CPU使用率',
+                            type: 'line',
+                            showSymbol: false,
+                            hoverAnimation: false,
                             data: data
                         }]
-                    });
-                }, 1000);
-            }
-            function getHdd()
-            {
-                var hddChart = echarts.init(document.getElementById('hddstatus'));
-                
-                var option = {
-                    title : {
-                        text: '总空间 <?php echo size_format($hddTotal, 3); ?>， 使用率 <?php echo $hddPercent; ?> %',
-                        right: '10%'
-                    },
-                    tooltip : {
-                        trigger: 'item',
-                        formatter: function(data){
-                            var seriesName = data.seriesName;
-                            var name = data.name;
-                            var value = size_format(data.value, 5);
-                            var percent = data.percent;
-                            return seriesName + '<br />' + name + ': ' + value + ' (' + percent + ' %)';
-                        }
-                    },
-                    legend: {
-                        orient: 'vertical',
-                        left: 'right',
-                        data: ['已用','空闲']
-                    },
-                    series : [
-                        {
-                            name: '硬盘使用状况',
-                            type: 'pie',
-                            radius : '80%',
-                            center: ['30%', '50%'],
-                            data:[
-                                {value:<?php echo $hddUsed; ?>, name:'已用'},
-                                {value:<?php echo $hddFree; ?>, name:'空闲'}
-                            ],
-                            itemStyle: {
-                                emphasis: {
-                                    shadowBlur: 10,
-                                    shadowOffsetX: 0,
-                                    shadowColor: 'rgba(0, 0, 0, 0.5)'
+                    };
+                    cpuChart.setOption(option);
+                    timeTicket = setInterval(function () {
+                        data.shift();
+                        data.push(randomData());
+
+                        cpuChart.setOption({
+                            series: [{
+                                data: data
+                            }]
+                        });
+                    }, 1000);
+                }
+                function getHdd()
+                {
+                    var hddChart = echarts.init(document.getElementById('hddstatus'));
+
+                    var option = {
+                        title : {
+                            text: '总空间 <?php echo size_format($hddTotal, 3); ?>， 使用率 <?php echo $hddPercent; ?> %',
+                            right: '10%'
+                        },
+                        tooltip : {
+                            trigger: 'item',
+                            formatter: function(data){
+                                var seriesName = data.seriesName;
+                                var name = data.name;
+                                var value = size_format(data.value, 5);
+                                var percent = data.percent;
+                                return seriesName + '<br />' + name + ': ' + value + ' (' + percent + ' %)';
+                            }
+                        },
+                        legend: {
+                            orient: 'vertical',
+                            left: 'right',
+                            data: ['已用','空闲']
+                        },
+                        series : [
+                            {
+                                name: '硬盘使用状况',
+                                type: 'pie',
+                                radius : '80%',
+                                center: ['30%', '50%'],
+                                data:[
+                                    {value:<?php echo $hddUsed; ?>, name:'已用'},
+                                    {value:<?php echo $hddFree; ?>, name:'空闲'}
+                                ],
+                                itemStyle: {
+                                    emphasis: {
+                                        shadowBlur: 10,
+                                        shadowOffsetX: 0,
+                                        shadowColor: 'rgba(0, 0, 0, 0.5)'
+                                    }
                                 }
                             }
-                        }
-                    ]
-                };
-                
-                hddChart.setOption(option, true);
+                        ]
+                    };
+
+                    hddChart.setOption(option, true);
+                }
+            <?php }?>
+            // 服务器测试
+            function getServerTest()
+            {
+                $('#btnTest').on('click', function () {
+                    var $btn = $(this).button('loading');
+                    $("#intData").html("...");
+                    $("#floatData").html("...");
+                    $("#ioData").html("...");
+                    
+                    $.getJSON("?act=st&callback=?", function (data){
+                        $("#intData").html(data.intData);
+                        $("#floatData").html(data.floatData);
+                        $("#ioData").html(data.ioData);
+                        $btn.button('reset');
+                    });
+                });
             }
         </script>
-        <?php }?>
     </head>
     <body>
         <div class="sui-container">
@@ -1051,6 +1157,48 @@ if(filter_input(INPUT_GET, 'act') == 'rt' && $is_constantly)
                     </tbody>
                 </table>
                 <?php }?>
+                                <table class="sui-table table-bordered table-primary">
+                    <thead>
+                        <tr>
+                            <th colspan="5">服务器性能测试</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td width="20%">参照对象</td>
+                            <td class="text-center">整数运算能力测试<div class="stxt">(1+1运算300万次)</div></td>
+                            <td class="text-center">浮点运算能力测试<div class="stxt">(圆周率开平方300万次)</div></td>
+                            <td class="text-center">数据I/O能力测试<div class="stxt">(读取10K文件1万次)</div></td>
+                            <td class="text-center">CPU信息</td>
+                        </tr>
+                        <?php foreach($server_testinfo as $skey => $sval){?>
+                        <tr>
+                            <td><?php echo getSvrTestUrl($sval); ?></td>
+                            <td class="text-center stxt"><?php echo $sval['intData']; ?></td>
+                            <td class="text-center stxt"><?php echo $sval['floatData']; ?></td>
+                            <td class="text-center stxt"><?php echo $sval['ioData']; ?></td>
+                            <td class="text-center stxt"><?php echo $sval['cpuData']; ?></td>
+                        </tr>
+                        <?php }?>
+                        <tr>
+                            <td>
+                                当前服务器
+                            </td>
+                            <td class="text-center">
+                                <div id="intData" class="stxt red">未测试</div>
+                            </td>
+                            <td class="text-center">
+                                <div id="floatData" class="stxt red">未测试</div>
+                            </td>
+                            <td class="text-center">
+                                <div id="ioData" class="stxt red">未测试</div>
+                            </td>
+                            <td class="text-center">
+                                <button type="button" data-loading-text="测试中..." id="btnTest" class="sui-btn btn-large btn-primary" autocomplete="off"><-- 开始测试</button>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
                 <table class="sui-table table-bordered table-primary">
                     <thead>
                         <tr>
