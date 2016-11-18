@@ -1157,48 +1157,6 @@ if(filter_input(INPUT_GET, 'act') == 'rt' && $is_constantly)
                     </tbody>
                 </table>
                 <?php }?>
-                                <table class="sui-table table-bordered table-primary">
-                    <thead>
-                        <tr>
-                            <th colspan="5">服务器性能测试</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr>
-                            <td width="20%">参照对象</td>
-                            <td class="text-center">整数运算能力测试<div class="stxt">(1+1运算300万次)</div></td>
-                            <td class="text-center">浮点运算能力测试<div class="stxt">(圆周率开平方300万次)</div></td>
-                            <td class="text-center">数据I/O能力测试<div class="stxt">(读取10K文件1万次)</div></td>
-                            <td class="text-center">CPU信息</td>
-                        </tr>
-                        <?php foreach($server_testinfo as $skey => $sval){?>
-                        <tr>
-                            <td><?php echo getSvrTestUrl($sval); ?></td>
-                            <td class="text-center stxt"><?php echo $sval['intData']; ?></td>
-                            <td class="text-center stxt"><?php echo $sval['floatData']; ?></td>
-                            <td class="text-center stxt"><?php echo $sval['ioData']; ?></td>
-                            <td class="text-center stxt"><?php echo $sval['cpuData']; ?></td>
-                        </tr>
-                        <?php }?>
-                        <tr>
-                            <td>
-                                当前服务器
-                            </td>
-                            <td class="text-center">
-                                <div id="intData" class="stxt red">未测试</div>
-                            </td>
-                            <td class="text-center">
-                                <div id="floatData" class="stxt red">未测试</div>
-                            </td>
-                            <td class="text-center">
-                                <div id="ioData" class="stxt red">未测试</div>
-                            </td>
-                            <td class="text-center">
-                                <button type="button" data-loading-text="测试中..." id="btnTest" class="sui-btn btn-large btn-primary" autocomplete="off"><-- 开始测试</button>
-                            </td>
-                        </tr>
-                    </tbody>
-                </table>
                 <table class="sui-table table-bordered table-primary">
                     <thead>
                         <tr>
@@ -1663,6 +1621,48 @@ if(filter_input(INPUT_GET, 'act') == 'rt' && $is_constantly)
                             <td><?php echo isfunction("filepro_fieldcount"); ?></td>
                             <td>SyBase 数据库</td>
                             <td><?php echo isfunction("sybase_close"); ?></td>
+                        </tr>
+                    </tbody>
+                </table>
+                <table class="sui-table table-bordered table-primary">
+                    <thead>
+                        <tr>
+                            <th colspan="5">服务器性能测试</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td width="20%">参照对象</td>
+                            <td class="text-center">整数运算能力测试<div class="stxt">(1+1运算300万次)</div></td>
+                            <td class="text-center">浮点运算能力测试<div class="stxt">(圆周率开平方300万次)</div></td>
+                            <td class="text-center">数据I/O能力测试<div class="stxt">(读取10K文件1万次)</div></td>
+                            <td class="text-center">CPU信息</td>
+                        </tr>
+                        <?php foreach($server_testinfo as $skey => $sval){?>
+                        <tr>
+                            <td><?php echo getSvrTestUrl($sval); ?></td>
+                            <td class="text-center stxt"><?php echo $sval['intData']; ?></td>
+                            <td class="text-center stxt"><?php echo $sval['floatData']; ?></td>
+                            <td class="text-center stxt"><?php echo $sval['ioData']; ?></td>
+                            <td class="text-center stxt"><?php echo $sval['cpuData']; ?></td>
+                        </tr>
+                        <?php }?>
+                        <tr>
+                            <td>
+                                当前服务器
+                            </td>
+                            <td class="text-center">
+                                <div id="intData" class="stxt red">未测试</div>
+                            </td>
+                            <td class="text-center">
+                                <div id="floatData" class="stxt red">未测试</div>
+                            </td>
+                            <td class="text-center">
+                                <div id="ioData" class="stxt red">未测试</div>
+                            </td>
+                            <td class="text-center">
+                                <button type="button" data-loading-text="测试中..." id="btnTest" class="sui-btn btn-large btn-primary" autocomplete="off"><-- 开始测试</button>
+                            </td>
                         </tr>
                     </tbody>
                 </table>
