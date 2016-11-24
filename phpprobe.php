@@ -7,11 +7,12 @@
  * 项目主页: https://github.com/fbcha/phpprobe
  * 博   客: https://my.oschina.net/fbcha/blog
  * Date: 2016-09-18
- * Update: 2016-11-08
+ * Update: 2016-11-24
  */
 error_reporting(0);
 $title = "PHPProbe探针 ";
 $name = "PHPProbe探针 ";
+$downUrl = "https://my.oschina.net/fbcha/blog/761871";
 $version = "v1.3";
 
 $is_constantly = true; // 是否开启实时信息, false - 关闭, true - 开启
@@ -95,8 +96,7 @@ function getini($var)
 // 检测函数支持
 function isfunction($funname = '')
 {
-    if (!checkFunction($funname))
-        return "函数错误！";
+    if (!checkFunction($funname)) return "函数错误！";
     return checkstatus(function_exists($funname));
 }
 
@@ -131,29 +131,24 @@ function disableFunction()
 // php扩展
 function isExt($ext)
 {
-    switch ($ext)
-    {
-        case 'gd_info':
-            $is_gd = extension_loaded("gd");
-            if($is_gd)
-            {
-                $gd = gd_info();
-                $out = $gd["GD Version"];
-            }else{
-                $out = checkstatus($is_gd);
-            }
-            break;
-        case 'sqlite3':
-            $is_sqlite3 = extension_loaded("sqlite3");
-            if($is_sqlite3)
-            {
-                $sqlite3 = SQLite3::version();
-                $out = $sqlite3['versionString'];
-            }else{
-                $out = checkstatus($is_sqlite3);
-            }
-            break;
-            
+    if ($ext == 'gd_info'){
+        $is_gd = extension_loaded("gd");
+        if($is_gd)
+        {
+            $gd = gd_info();
+            $out = $gd["GD Version"];
+        }else{
+            $out = checkstatus($is_gd);
+        }
+    }else if($ext == 'sqlite3'){
+        $is_sqlite3 = extension_loaded("sqlite3");
+        if($is_sqlite3)
+        {
+            $sqlite3 = SQLite3::version();
+            $out = $sqlite3['versionString'];
+        }else{
+            $out = checkstatus($is_sqlite3);
+        }
     }
     return $out;
 }
@@ -198,11 +193,12 @@ switch (PHP_OS)
 
 function getCpuInfo()
 {
+    $cpu = [];
     $str = file_get_contents("/proc/stat");
     $mode = "/(cpu)[\s]+([0-9]+)[\s]+([0-9]+)[\s]+([0-9]+)[\s]+([0-9]+)[\s]+([0-9]+)[\s]+([0-9]+)[\s]+([0-9]+)[\s]+([0-9]+)/";
     preg_match_all($mode, $str, $cpu);
-    $total=$cpu[2][0]+$cpu[3][0]+$cpu[4][0]+$cpu[5][0]+$cpu[6][0]+$cpu[7][0]+$cpu[8][0]+$cpu[9][0];
-    $time=$cpu[2][0]+$cpu[3][0]+$cpu[4][0]+$cpu[6][0]+$cpu[7][0]+$cpu[8][0]+$cpu[9][0];
+    $total = $cpu[2][0] + $cpu[3][0] + $cpu[4][0] + $cpu[5][0] + $cpu[6][0] + $cpu[7][0] + $cpu[8][0] + $cpu[9][0];
+    $time = $cpu[2][0] + $cpu[3][0] + $cpu[4][0] + $cpu[6][0] + $cpu[7][0] + $cpu[8][0] + $cpu[9][0];
     return [
         'total' => $total,
         'time' => $time
@@ -293,11 +289,11 @@ function svr_linux()
     $cpuinfo1 = getCpuInfo($str);
     sleep(1);
     $cpuinfo2 = getCpuInfo($str);
-    $time=$cpuinfo2['time']-$cpuinfo1['time'];
-    $total=$cpuinfo2['total']-$cpuinfo1['total'];
+    $time = $cpuinfo2['time'] - $cpuinfo1['time'];
+    $total = $cpuinfo2['total'] - $cpuinfo1['total'];
 
-    $percent=round($time/$total,4);
-    $percent=$percent*100;
+    $percent = round($time/$total,4);
+    $percent = $percent * 100;
     $res['cpu']['percent'] = $percent;
     
     return $res;
@@ -517,20 +513,19 @@ function svr_winnt()
     $res['cpu']['model'] = $cpuinfo['Name'].' [二级缓存：'.$cache.']';
 
     // 获取服务器运行时间
-	if(get_cfg_var("com.allow_dcom"))
-	{
-		$sysinfo = getWMI($wmi, "Win32_OperatingSystem", "LastBootUpTime,TotalVisibleMemorySize,FreePhysicalMemory");
-	}else if(function_exists("exec")){
-		exec("wmic os get LastBootUpTime,TotalVisibleMemorySize,FreePhysicalMemory", $osInfo);
-		$osKey = preg_split("/ +/", $osInfo[0]);
-		$osValue = preg_split("/ +/", $osInfo[1]);
-		foreach($osKey as $key => $value)
-		{
-			$sysinfo[$value] = $osValue[$key];
-		}
-	}else{
-		return false;
-	}
+    if (get_cfg_var("com.allow_dcom")) {
+        $sysinfo = getWMI($wmi, "Win32_OperatingSystem", "LastBootUpTime,TotalVisibleMemorySize,FreePhysicalMemory");
+    } else if (function_exists("exec")) {
+        exec("wmic os get LastBootUpTime,TotalVisibleMemorySize,FreePhysicalMemory", $osInfo);
+        $osKey = preg_split("/ +/", $osInfo[0]);
+        $osValue = preg_split("/ +/", $osInfo[1]);
+        foreach ($osKey as $key => $value)
+        {
+            $sysinfo[$value] = $osValue[$key];
+        }
+    } else {
+        return false;
+    }
 
     $res['uptime'] = $sysinfo['LastBootUpTime'];
     $str = time() - strtotime(substr($res['uptime'],0,14));
@@ -553,20 +548,19 @@ function svr_winnt()
     $res['mUsed'] = size_format($mUsed,1);
     $res['mPercent'] = round($mUsed / $mTotal * 100,1);
 
-	if(get_cfg_var("com.allow_dcom"))
-	{
-		$swapinfo = getWMI($wmi,"Win32_PageFileUsage", 'AllocatedBaseSize,CurrentUsage');
-	}else if(function_exists("exec")){
-		exec("wmic pagefile get AllocatedBaseSize,CurrentUsage", $swaps);
-		$swapKey = preg_split("/ +/", $swaps[0]);
-		$swapValue = preg_split("/ +/", $swaps[1]);
-		foreach($swapKey as $sk => $sv)
-		{
-			$swapinfo[$sv] = $swapValue[$sk];
-		}
-	}else{
-		return false;
-	}
+    if (get_cfg_var("com.allow_dcom")) {
+        $swapinfo = getWMI($wmi, "Win32_PageFileUsage", 'AllocatedBaseSize,CurrentUsage');
+    } else if (function_exists("exec")) {
+        exec("wmic pagefile get AllocatedBaseSize,CurrentUsage", $swaps);
+        $swapKey = preg_split("/ +/", $swaps[0]);
+        $swapValue = preg_split("/ +/", $swaps[1]);
+        foreach ($swapKey as $sk => $sv)
+        {
+            $swapinfo[$sv] = $swapValue[$sk];
+        }
+    } else {
+        return false;
+    }
     $sTotal = $swapinfo['AllocatedBaseSize'] * 1024 * 1024;
     $sUsed = $swapinfo['CurrentUsage'] * 1024 * 1024;
     $sFree = $sTotal - $sUsed;
@@ -613,9 +607,12 @@ function size_format($bytes, $decimals = 2)
     );
 
     foreach ($quant as $unit => $mag)
+    {
         if (doubleval($bytes) >= $mag)
+        {
             return number_format($bytes / $mag, $decimals) . ' ' . $unit;
-
+        }
+    }
     return false;
 }
 
@@ -634,40 +631,32 @@ $server_testinfo = array(
 function getTest($val)
 {
     $out = '';
-    
     if($val === 'intData'){
 	$timeStart = gettimeofday();
-        
 	for($i = 0; $i < 3000000; $i++)
 	{
             $t = 1+1;
 	}
-
 	$timeEnd = gettimeofday();
 	$time = ($timeEnd["usec"] - $timeStart["usec"]) / 1000000 + $timeEnd["sec"] - $timeStart["sec"];
 	$out = round($time, 3)."秒";
     }else if($val === 'floatData'){
 	$t = pi();
 	$timeStart = gettimeofday();
-
 	for($i = 0; $i < 3000000; $i++)
 	{
             sqrt($t);
 	}
-
         $timeEnd = gettimeofday();
 	$time = ($timeEnd["usec"] - $timeStart["usec"]) / 1000000 + $timeEnd["sec"] - $timeStart["sec"];
 	$out = round($time, 3)."秒";
     }else if($val === 'ioData'){
         $fp = fopen(PHPPROBE, 'r');
-        
         $timeStart = gettimeofday();
-        
         for($i = 0; $i < 10000; $i++) {
             fread($fp, 10240);
             rewind($fp);
         }
-        
         $timeEnd = gettimeofday();
         fclose($fp);
         $time = ($timeEnd["usec"] - $timeStart["usec"]) / 1000000 + $timeEnd["sec"] - $timeStart["sec"];
@@ -699,6 +688,21 @@ if(filter_input(INPUT_GET, 'act') == 'st')
     );
     $stJsonRes = json_encode($sts);
     echo filter_input(INPUT_GET, 'callback') . '(' . $stJsonRes . ')';
+    exit();
+}
+if(filter_input(INPUT_GET, 'act') == 'test')
+{
+    $posts = filter_input_array(INPUT_POST);
+    if($posts['type'] == 'mysql')
+    {
+        $link = mysql_connect($posts['host'].":".$posts['port'], $posts['user'], $posts['pwd']);
+        echo $link ? checkstatus(true) : checkstatus(false);
+        mysqli_close($link);
+    }else if($posts['type'] == 'fun'){
+        echo $posts['funname'] ? isfunction($posts['funname']) : '<span class="stxt red">请输入函数名</span>';
+    }else{
+        echo false;
+    }
     exit();
 }
 
@@ -738,18 +742,37 @@ if(filter_input(INPUT_GET, 'act') == 'rt' && $is_constantly)
     exit();
 }
 ?>
+<!--
+       __                                   __                
+      /\ \                                 /\ \               
+ _____\ \ \___   _____   _____   _ __   ___\ \ \____     __   
+/\ '__`\ \  _ `\/\ '__`\/\ '__`\/\`'__\/ __`\ \ '__`\  /'__`\ 
+\ \ \L\ \ \ \ \ \ \ \L\ \ \ \L\ \ \ \//\ \L\ \ \ \L\ \/\  __/ 
+ \ \ ,__/\ \_\ \_\ \ ,__/\ \ ,__/\ \_\\ \____/\ \_,__/\ \____\
+  \ \ \/  \/_/\/_/\ \ \/  \ \ \/  \/_/ \/___/  \/___/  \/____/
+   \ \_\           \ \_\   \ \_\                              
+    \/_/            \/_/    \/_/                              
+
+ _______ .______     ______  __    __       ___      
+|   ____||   _  \   /      ||  |  |  |     /   \     
+|  |__   |  |_)  | |  ,----'|  |__|  |    /  ^  \    
+|   __|  |   _  <  |  |     |   __   |   /  /_\  \   
+|  |     |  |_)  | |  `----.|  |  |  |  /  _____  \  
+|__|     |______/   \______||__|  |__| /__/     \__\ 
+-->
 <!DOCTYPE html>
 <html>
     <head>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title><?php echo $title . $version; ?></title>
+        <title><?php echo $title . $version; ?> - by fbcha shooter</title>
         <link href="http://g.alicdn.com/sj/dpl/1.5.1/css/sui.min.css" rel="stylesheet" />
         <script type="text/javascript" src="http://g.alicdn.com/sj/lib/jquery.min.js"></script>
         <script type="text/javascript" src="http://g.alicdn.com/sj/dpl/1.5.1/js/sui.min.js"></script>
         <script type="text/javascript" src="//cdn.bootcss.com/echarts/3.2.3/echarts.min.js"></script>
         <style type="text/css">
             body{font-size: 1.25vw;}
+            form{margin: 0;padding: 0;}
             .stxt{font-size: 1vw;color: #666;}
             .footer{margin-top: 20px;border-top: 3px #ccc solid;padding: 20px; text-align: center;}
             .ext-tag-font li{font-size: 1.1vw;}
@@ -757,10 +780,18 @@ if(filter_input(INPUT_GET, 'act') == 'rt' && $is_constantly)
             .red{color:#CC0000;}
             td.text-center{text-align: center;}
             .svr-logo, .svr-logo-text{padding: 10px;}
+            td.p0{padding: 0;}
+            table.test-table{margin: 0;padding: 0;}
+            .sui-table td.bl0{border-left: 0;}
+            .sui-table td.test-td{padding: 10px 0 5px 0;}
+            .sui-table td.test-td .add-on{font-size: 1.1vw;height: 22px;line-height: 22px;}
+            .mb0{margin-bottom: 0;}
+            .sui-form{font-size: 1.25vw;}
         </style>
         <script type="text/javascript">
             $(document).ready(function () {
                 getServerTest();
+                getTestDB();
                 <?php if($svrShow === 'show'){ ?>
                     getRealTime();
                     getCpuStatus();
@@ -1015,6 +1046,32 @@ if(filter_input(INPUT_GET, 'act') == 'rt' && $is_constantly)
                     });
                 });
             }
+            // 数据库检测
+            function getTestDB()
+            {
+                $('form').submit(function(e) {
+                    e.preventDefault();
+                    var $this = $(this);
+                    var $btn = $this.find('button');
+                    $.ajax({
+                        url: "?act=test",
+                        type: 'post',
+                        data: $this.serialize(),
+                        datatype: 'json',
+                        beforeSend: function(){
+                            $btn.button('loading');
+                            $this.find('#tipInfo').html('检测中...');
+                        },
+                        success: function(data){
+                            $this.find('#tipInfo').html(data);
+                            $btn.button('reset');
+                        },
+                        error: function(e){
+                            
+                        }
+                    });
+                });
+            }
         </script>
     </head>
     <body>
@@ -1025,7 +1082,10 @@ if(filter_input(INPUT_GET, 'act') == 'rt' && $is_constantly)
                     <span class="beta"><?php echo $version; ?></span>
 
                     <ul class="sui-nav pull-right">
-                        <li><a href="https://my.oschina.net/fbcha/blog/748251" target="_blank">新版下载</a></li>
+                        <li><a>获取程序:</a></li>
+                        <li><a href="https://github.com/fbcha/phpprobe" target="_blank">Github</a></li>
+                        <li><a href="https://git.oschina.net/fbcha/phpprobe" target="_blank">Git@OSC</a></li>
+                        <li><a href="<?php echo $downUrl; ?>" target="_blank">OSChina</a></li>
                     </ul>
                 </div>
             </div>
@@ -1666,9 +1726,88 @@ if(filter_input(INPUT_GET, 'act') == 'rt' && $is_constantly)
                         </tr>
                     </tbody>
                 </table>
+                <table class="sui-table table-bordered table-primary">
+                    <thead>
+                        <tr>
+                            <th>数据库连接检测</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td class="p0">
+                                <form id="formMySQL" class="sui-form mb0">
+                                    <table class="sui-table test-table">
+                                        <tr>
+                                            <td class="bl0" width="10%">MySQL</td>
+                                            <td class="text-center test-td">
+                                                <div class="input-prepend input-append">
+                                                    <span class="add-on">主机</span>
+                                                    <input class="input-xfat" id="inputHost" name="host" value="localhost" placeholder="主机" type="text">
+                                                    <span class="add-on">端口</span>
+                                                    <input class="input-xfat" id="inputPort" name="port" value="3306" placeholder="端口" type="text">
+                                                    <span class="add-on">用户名</span>
+                                                    <input class="input-xfat" id="inputUser" name="user" placeholder="用户名" type="text">
+                                                    <span class="add-on">密码</span>
+                                                    <input class="input-xfat" id="inputPwd" name="pwd" placeholder="密码" type="text">
+                                                </div>
+                                            </td>
+                                            <td class="text-center">
+                                                <div class="control-group">
+                                                    <label class="control-label"></label>
+                                                    <div class="controls">
+                                                        <input type="hidden" name="type" value="mysql" />
+                                                        <button type="submit" data-loading-text="检测中..." class="sui-btn btn-large btn-primary">检 测</button>
+                                                    </div>
+                                                </div>
+                                            </td>
+                                            <td width="8%" class="text-center"><div id="tipInfo"></div></td>
+                                        </tr>
+                                    </table>
+                                </form>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+                <table class="sui-table table-bordered table-primary">
+                    <thead>
+                        <tr>
+                            <th>函数检测</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td class="p0">
+                                <form id="formFun" class="sui-form mb0">
+                                    <table class="sui-table test-table">
+                                        <tr>
+                                            <td class="bl0" width="20%">请输入您要检测的函数</td>
+                                            <td class="text-center test-td">
+                                                <div class="control-group">
+                                                    <div class="controls">
+                                                        <input name="funname" placeholder="请输入您要检测的函数名,例如 'explode' " class="input-xfat input-xxlarge" type="text">
+                                                    </div>
+                                                </div>
+                                            </td>
+                                            <td class="text-center">
+                                                <div class="control-group">
+                                                    <label class="control-label"></label>
+                                                    <div class="controls">
+                                                        <input type="hidden" name="type" value="fun" />
+                                                        <button type="submit" data-loading-text="检测中..." class="sui-btn btn-large btn-primary">检 测</button>
+                                                    </div>
+                                                </div>
+                                            </td>
+                                            <td width="8%" class="text-center"><div id="tipInfo"></div></td>
+                                        </tr>
+                                    </table>
+                                </form>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
             </div>
             <div class="footer">
-                <a href="https://my.oschina.net/fbcha/blog/761871" target="_blank"><?php echo $name; ?> <?php echo $version; ?></a>
+                <a href="<?php echo $downUrl; ?>" target="_blank"><?php echo $name; ?> <?php echo $version; ?></a>
             </div>
         </div>
     </body>
