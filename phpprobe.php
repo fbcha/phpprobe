@@ -7,11 +7,12 @@
  * 项目主页: https://github.com/fbcha/phpprobe
  * 博   客: https://my.oschina.net/fbcha/blog
  * Date: 2016-09-18
- * Update: 2016-11-08
+ * Update: 2016-11-24
  */
 error_reporting(0);
 $title = "PHPProbe探针 ";
 $name = "PHPProbe探针 ";
+$downUrl = "https://my.oschina.net/fbcha/blog/761871";
 $version = "v1.3";
 
 $is_constantly = true; // 是否开启实时信息, false - 关闭, true - 开启
@@ -95,8 +96,7 @@ function getini($var)
 // 检测函数支持
 function isfunction($funname = '')
 {
-    if (!checkFunction($funname))
-        return "函数错误！";
+    if (!checkFunction($funname)) return "函数错误！";
     return checkstatus(function_exists($funname));
 }
 
@@ -701,6 +701,21 @@ if(filter_input(INPUT_GET, 'act') == 'st')
     echo filter_input(INPUT_GET, 'callback') . '(' . $stJsonRes . ')';
     exit();
 }
+if(filter_input(INPUT_GET, 'act') == 'test')
+{
+    $posts = filter_input_array(INPUT_POST);
+    if($posts['type'] == 'mysql')
+    {
+        $link = mysql_connect($posts['host'].":".$posts['port'], $posts['user'], $posts['pwd']);
+        echo $link ? checkstatus(true) : checkstatus(false);
+        mysqli_close($link);
+    }else if($posts['type'] == 'fun'){
+        echo $posts['funname'] ? isfunction($posts['funname']) : false;
+    }else{
+        echo false;
+    }
+    exit();
+}
 
 if($is_constantly)
 {
@@ -738,18 +753,37 @@ if(filter_input(INPUT_GET, 'act') == 'rt' && $is_constantly)
     exit();
 }
 ?>
+<!--
+       __                                   __                
+      /\ \                                 /\ \               
+ _____\ \ \___   _____   _____   _ __   ___\ \ \____     __   
+/\ '__`\ \  _ `\/\ '__`\/\ '__`\/\`'__\/ __`\ \ '__`\  /'__`\ 
+\ \ \L\ \ \ \ \ \ \ \L\ \ \ \L\ \ \ \//\ \L\ \ \ \L\ \/\  __/ 
+ \ \ ,__/\ \_\ \_\ \ ,__/\ \ ,__/\ \_\\ \____/\ \_,__/\ \____\
+  \ \ \/  \/_/\/_/\ \ \/  \ \ \/  \/_/ \/___/  \/___/  \/____/
+   \ \_\           \ \_\   \ \_\                              
+    \/_/            \/_/    \/_/                              
+
+ _______ .______     ______  __    __       ___      
+|   ____||   _  \   /      ||  |  |  |     /   \     
+|  |__   |  |_)  | |  ,----'|  |__|  |    /  ^  \    
+|   __|  |   _  <  |  |     |   __   |   /  /_\  \   
+|  |     |  |_)  | |  `----.|  |  |  |  /  _____  \  
+|__|     |______/   \______||__|  |__| /__/     \__\ 
+-->
 <!DOCTYPE html>
 <html>
     <head>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title><?php echo $title . $version; ?></title>
+        <title><?php echo $title . $version; ?> - by fbcha shooter</title>
         <link href="http://g.alicdn.com/sj/dpl/1.5.1/css/sui.min.css" rel="stylesheet" />
         <script type="text/javascript" src="http://g.alicdn.com/sj/lib/jquery.min.js"></script>
         <script type="text/javascript" src="http://g.alicdn.com/sj/dpl/1.5.1/js/sui.min.js"></script>
         <script type="text/javascript" src="//cdn.bootcss.com/echarts/3.2.3/echarts.min.js"></script>
         <style type="text/css">
             body{font-size: 1.25vw;}
+            form{margin: 0;padding: 0;}
             .stxt{font-size: 1vw;color: #666;}
             .footer{margin-top: 20px;border-top: 3px #ccc solid;padding: 20px; text-align: center;}
             .ext-tag-font li{font-size: 1.1vw;}
@@ -757,10 +791,18 @@ if(filter_input(INPUT_GET, 'act') == 'rt' && $is_constantly)
             .red{color:#CC0000;}
             td.text-center{text-align: center;}
             .svr-logo, .svr-logo-text{padding: 10px;}
+            td.p0{padding: 0;}
+            table.test-table{margin: 0;padding: 0;}
+            .sui-table td.bl0{border-left: 0;}
+            .sui-table td.test-td{padding: 10px 0 5px 0;}
+            .sui-table td.test-td .add-on{font-size: 1.1vw;height: 22px;line-height: 22px;}
+            .mb0{margin-bottom: 0;}
+            .sui-form{font-size: 1.25vw;}
         </style>
         <script type="text/javascript">
             $(document).ready(function () {
                 getServerTest();
+                getTestDB();
                 <?php if($svrShow === 'show'){ ?>
                     getRealTime();
                     getCpuStatus();
@@ -1015,6 +1057,31 @@ if(filter_input(INPUT_GET, 'act') == 'rt' && $is_constantly)
                     });
                 });
             }
+            // 数据库检测
+            function getTestDB()
+            {
+                $('form').submit(function(e) {
+                    e.preventDefault();
+                    var $this = $(this);
+                    var $btn = $this.find('button').button('loading');
+                    $.ajax({
+                        url: "?act=test",
+                        type: 'post',
+                        data: $this.serialize(),
+                        datatype: 'json',
+                        success: function(data){
+                            $this.find('#tipInfo').html(data);
+                        },
+                        error: function(e){
+                            
+                        },
+                        beforeSend: function(){
+                            $this.find('#tipInfo').html('连接中...');
+                        }
+                    });
+                    $btn.button('reset');
+                });
+            }
         </script>
     </head>
     <body>
@@ -1025,7 +1092,10 @@ if(filter_input(INPUT_GET, 'act') == 'rt' && $is_constantly)
                     <span class="beta"><?php echo $version; ?></span>
 
                     <ul class="sui-nav pull-right">
-                        <li><a href="https://my.oschina.net/fbcha/blog/748251" target="_blank">新版下载</a></li>
+                        <li><a>获取程序:</a></li>
+                        <li><a href="https://github.com/fbcha/phpprobe" target="_blank">Github</a></li>
+                        <li><a href="https://git.oschina.net/fbcha/phpprobe" target="_blank">Git@OSC</a></li>
+                        <li><a href="<?php echo $downUrl; ?>" target="_blank">OSChina</a></li>
                     </ul>
                 </div>
             </div>
@@ -1666,9 +1736,88 @@ if(filter_input(INPUT_GET, 'act') == 'rt' && $is_constantly)
                         </tr>
                     </tbody>
                 </table>
+                <table class="sui-table table-bordered table-primary">
+                    <thead>
+                        <tr>
+                            <th>数据库连接检测</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td class="p0">
+                                <form id="formMySQL" class="sui-form mb0">
+                                    <table class="sui-table test-table">
+                                        <tr>
+                                            <td class="bl0" width="10%">MySQL</td>
+                                            <td class="text-center test-td">
+                                                <div class="input-prepend input-append">
+                                                    <span class="add-on">主机</span>
+                                                    <input class="input-xfat" id="inputHost" name="host" value="localhost" placeholder="主机" type="text">
+                                                    <span class="add-on">端口</span>
+                                                    <input class="input-xfat" id="inputPort" name="port" value="3306" placeholder="端口" type="text">
+                                                    <span class="add-on">用户名</span>
+                                                    <input class="input-xfat" id="inputUser" name="user" placeholder="用户名" type="text">
+                                                    <span class="add-on">密码</span>
+                                                    <input class="input-xfat" id="inputPwd" name="pwd" placeholder="密码" type="text">
+                                                </div>
+                                            </td>
+                                            <td class="text-center">
+                                                <div class="control-group">
+                                                    <label class="control-label"></label>
+                                                    <div class="controls">
+                                                        <input type="hidden" name="type" value="mysql" />
+                                                        <button type="submit" class="sui-btn btn-large btn-primary">检 测</button>
+                                                    </div>
+                                                </div>
+                                            </td>
+                                            <td width="8%" class="text-center"><div id="tipInfo"></div></td>
+                                        </tr>
+                                    </table>
+                                </form>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+                <table class="sui-table table-bordered table-primary">
+                    <thead>
+                        <tr>
+                            <th>函数检测</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td class="p0">
+                                <form id="formFun" class="sui-form mb0">
+                                    <table class="sui-table test-table">
+                                        <tr>
+                                            <td class="bl0" width="20%">请输入您要检测的函数</td>
+                                            <td class="text-center test-td">
+                                                <div class="control-group">
+                                                    <div class="controls">
+                                                        <input name="funname" placeholder="请输入您要检测的函数名,例如 'explode' " class="input-xfat input-xxlarge" type="text">
+                                                    </div>
+                                                </div>
+                                            </td>
+                                            <td class="text-center">
+                                                <div class="control-group">
+                                                    <label class="control-label"></label>
+                                                    <div class="controls">
+                                                        <input type="hidden" name="type" value="fun" />
+                                                        <button type="submit" class="sui-btn btn-large btn-primary">检 测</button>
+                                                    </div>
+                                                </div>
+                                            </td>
+                                            <td width="8%" class="text-center"><div id="tipInfo"></div></td>
+                                        </tr>
+                                    </table>
+                                </form>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
             </div>
             <div class="footer">
-                <a href="https://my.oschina.net/fbcha/blog/761871" target="_blank"><?php echo $name; ?> <?php echo $version; ?></a>
+                <a href="<?php echo $downUrl; ?>" target="_blank"><?php echo $name; ?> <?php echo $version; ?></a>
             </div>
         </div>
     </body>
