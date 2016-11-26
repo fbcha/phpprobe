@@ -705,6 +705,21 @@ if(filter_input(INPUT_GET, 'act') == 'test')
     }
     exit();
 }
+if(filter_input(INPUT_GET, 'act') == 'test')
+{
+    $posts = filter_input_array(INPUT_POST);
+    if($posts['type'] == 'mysql')
+    {
+        $link = mysql_connect($posts['host'].":".$posts['port'], $posts['user'], $posts['pwd']);
+        echo $link ? checkstatus(true) : checkstatus(false);
+        mysqli_close($link);
+    }else if($posts['type'] == 'fun'){
+        echo $posts['funname'] ? isfunction($posts['funname']) : false;
+    }else{
+        echo false;
+    }
+    exit();
+}
 
 if($is_constantly)
 {
