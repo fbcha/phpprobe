@@ -7,13 +7,13 @@
  * 项目主页: https://github.com/fbcha/phpprobe
  * 博   客: https://my.oschina.net/fbcha/blog
  * Date: 2016-09-18
- * Update: 2016-11-24
+ * Update: 2016-12-18
  */
 error_reporting(0);
 $title = "PHPProbe探针 ";
 $name = "PHPProbe探针 ";
-$downUrl = "https://my.oschina.net/fbcha/blog/761871";
-$version = "v1.3";
+$downUrl = "https://github.com/fbcha/phpprobe";
+$version = "v1.3.1";
 
 $is_constantly = true; // 是否开启实时信息, false - 关闭, true - 开启
 
@@ -285,7 +285,7 @@ function svr_linux()
     $res['sBool'] = true;
     
     // cpu状态
-    if (false === file_get_contents("/proc/stat")) return false;
+    if (false === ($str = file_get_contents("/proc/stat"))) return false;
     $cpuinfo1 = getCpuInfo($str);
     sleep(1);
     $cpuinfo2 = getCpuInfo($str);
@@ -615,6 +615,60 @@ function size_format($bytes, $decimals = 2)
     }
     return false;
 }
+// 网络流量
+function getNetwork()
+{
+    $net = [];
+    $netstr = file_get_contents('/proc/net/dev');
+    $res['nBool'] = $netstr ? true : false;
+    $bufe = preg_split("/\n/", $netstr, -1, PREG_SPLIT_NO_EMPTY);
+    foreach ($bufe as $buf) {
+        if (preg_match('/:/', $buf)) {
+            list($dev_name, $stats_list) = preg_split('/:/', $buf, 2);
+            $stats = preg_split('/\s+/', trim($stats_list));
+            $net[$dev_name]['name'] = trim($dev_name);
+            $net[$dev_name]['rxbytes'] = netSize($stats[0]);
+            $net[$dev_name]['txbytes'] = netSize($stats[8]);
+            $net[$dev_name]['rxspeed'] = $stats[0];
+            $net[$dev_name]['txspeed'] = $stats[8];
+            $net[$dev_name]['errors'] = $stats[2] + $stats[10];
+            $net[$dev_name]['drops'] = $stats[3] + $stats[11];
+        }
+    }
+    $res['net'] = $net;
+
+    return $res;
+}
+function netSize($size, $decimals = 2)
+{
+    if($size < 1024) {
+        $unit="Bbps";
+    } else if($size < 10240) {
+        $size=round($size/1024, $decimals);
+        $unit="Kbps";
+    } else if($size < 102400) {
+        $size=round($size/1024, $decimals);
+        $unit="Kbps";
+    } else if($size < 1048576) {
+        $size=round($size/1024, $decimals);
+        $unit="Kbps";
+    } else if ($size < 10485760) {
+        $size=round($size/1048576, $decimals);
+        $unit="Mbps";
+    } else if ($size < 104857600) {
+        $size=round($size/1048576,$decimals);
+        $unit="Mbps";
+    } else if ($size < 1073741824) {
+        $size=round($size/1048576, $decimals);
+        $unit="Mbps";
+    } else {
+        $size=round($size/1073741824, $decimals);
+        $unit="Gbps";
+    }
+
+    $size .= $unit;
+    return $size;
+}
 
 // 服务器测试
 $server_testinfo = array(
@@ -705,21 +759,6 @@ if(filter_input(INPUT_GET, 'act') == 'test')
     }
     exit();
 }
-if(filter_input(INPUT_GET, 'act') == 'test')
-{
-    $posts = filter_input_array(INPUT_POST);
-    if($posts['type'] == 'mysql')
-    {
-        $link = mysql_connect($posts['host'].":".$posts['port'], $posts['user'], $posts['pwd']);
-        echo $link ? checkstatus(true) : checkstatus(false);
-        mysqli_close($link);
-    }else if($posts['type'] == 'fun'){
-        echo $posts['funname'] ? isfunction($posts['funname']) : false;
-    }else{
-        echo false;
-    }
-    exit();
-}
 
 if($is_constantly)
 {
@@ -756,6 +795,17 @@ if(filter_input(INPUT_GET, 'act') == 'rt' && $is_constantly)
     echo filter_input(INPUT_GET, 'callback') . '(' . $jsonRes . ')';
     exit();
 }
+$svrInfo = getNetwork();
+if(filter_input(INPUT_GET, 'act') == 'ort' && $svrInfo['nBool'])
+{
+    $oRes = array(
+        'Network' => $svrInfo['net']
+    );
+    $ortRes = json_encode($oRes);
+    echo filter_input(INPUT_GET, 'callback') . '(' . $ortRes . ')';
+    exit();
+}
+
 ?>
 <!--
        __                                   __                
@@ -807,6 +857,9 @@ if(filter_input(INPUT_GET, 'act') == 'rt' && $is_constantly)
             $(document).ready(function () {
                 getServerTest();
                 getTestDB();
+                <?php if($svrInfo['nBool']){ ?>
+                    getNetwork();
+                <?php } ?>
                 <?php if($svrShow === 'show'){ ?>
                     getRealTime();
                     getCpuStatus();
@@ -814,6 +867,46 @@ if(filter_input(INPUT_GET, 'act') == 'rt' && $is_constantly)
                     getHdd();
                 <?php }?>
             });
+            <?php if($svrInfo['nBool']){ ?>
+                var inputSpeed = [], outSpeed = [];
+                <?php foreach($svrInfo['net'] as $netkey => $netvar){ ?>
+                    inputSpeed["<?php echo $netvar['name']; ?>"] = <?php echo $netvar['rxspeed']; ?>;
+                    outSpeed["<?php echo $netvar['name']; ?>"] = <?php echo $netvar['txspeed']; ?>;
+                <?php } ?>
+                function getNetwork()
+                {
+                    setTimeout("getNetwork()", 1000);
+                    $.getJSON("?act=ort&callback=?", function (data){
+                        var items = data['Network'];
+                        for(var item in items)
+                        {
+                            $('#' + items[item].name + '_rxbytes').html(items[item].rxbytes);
+                            $('#' + items[item].name + '_txbytes').html(items[item].txbytes);
+                            $('#' + items[item].name + '_errors').html(items[item].errors);
+                            $('#' + items[item].name + '_drops').html(items[item].drops);
+                            $('#' + items[item].name + '_rxspeed').html(ForDight((items[item].rxspeed-inputSpeed[items[item].name]), 3));
+                            $('#' + items[item].name + '_txspeed').html(ForDight((items[item].txspeed-outSpeed[items[item].name]), 3));
+                            inputSpeed[items[item].name] = items[item].rxspeed;
+                            outSpeed[items[item].name] = items[item].txspeed;
+                        }
+                    });
+                }
+                function ForDight(Dight,How)
+                { 
+                    if (Dight<0){
+                        var Last=0+"B/s";
+                    }else if (Dight<1024){
+                        var Last=Math.round(Dight*Math.pow(10,How))/Math.pow(10,How)+"B/s";
+                    }else if (Dight<1048576){
+                        Dight=Dight/1024;
+                        var Last=Math.round(Dight*Math.pow(10,How))/Math.pow(10,How)+"K/s";
+                    }else{
+                        Dight=Dight/1048576;
+                        var Last=Math.round(Dight*Math.pow(10,How))/Math.pow(10,How)+"M/s";
+                    }
+                    return Last; 
+                }
+            <?php } ?>
             <?php if($svrShow === 'show'){ ?>
                 function size_format(bytes, decimals=4)
                 {
@@ -837,7 +930,8 @@ if(filter_input(INPUT_GET, 'act') == 'rt' && $is_constantly)
                         'MemoryRealFree',
                         'Buffers',
                         'SwapFree',
-                        'SwapUsed'
+                        'SwapUsed',
+                        'Network'
                     ];
                     $.getJSON("?act=rt&callback=?", function (data) {
                         for(var i=0; i < $rtArr.length; i++)
@@ -1098,6 +1192,7 @@ if(filter_input(INPUT_GET, 'act') == 'rt' && $is_constantly)
 
                     <ul class="sui-nav pull-right">
                         <li><a>获取程序:</a></li>
+                        <li><a href="http://zerosn.com" target="_blank">ZeroSN</a></li>
                         <li><a href="https://github.com/fbcha/phpprobe" target="_blank">Github</a></li>
                         <li><a href="https://git.oschina.net/fbcha/phpprobe" target="_blank">Git@OSC</a></li>
                         <li><a href="<?php echo $downUrl; ?>" target="_blank">OSChina</a></li>
@@ -1232,6 +1327,37 @@ if(filter_input(INPUT_GET, 'act') == 'rt' && $is_constantly)
                     </tbody>
                 </table>
                 <?php }?>
+                <?php if($svrInfo['nBool']){ ?>
+                <table class="sui-table table-bordered table-primary">
+                    <thead>
+                        <tr>
+                            <th colspan="4">网络使用状况</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td class="text-center">设备</td>
+                            <td class="text-center">接收</td>
+                            <td class="text-center">发送</td>
+                            <td class="text-center">错误/丢失</td>
+                        </tr>
+                        <?php foreach($svrInfo['net'] as $key=>$value){ ?>
+                        <tr>
+                            <td class="text-center"><?php echo $key; ?></td>
+                            <td class="text-center">
+                                <span id="<?php echo $value['name']; ?>_rxbytes"><?php echo $value['rxbytes']; ?></span>
+                                (<span id="<?php echo $value['name']; ?>_rxspeed" class="stxt"></span>)
+                            </td>
+                            <td class="text-center">
+                                <span id="<?php echo $value['name']; ?>_txbytes"><?php echo $value['txbytes']; ?></span>
+                                (<span id="<?php echo $value['name']; ?>_txspeed" class="stxt"></span>)
+                            </td>
+                            <td class="text-center"><span id="<?php echo $value['name']; ?>_errors"><?php echo $value['errors']; ?></span> / <span id="<?php echo $value['name']; ?>_drops"><?php echo $value['drops']; ?></span></td>
+                        </tr>
+                        <?php } ?>
+                    </tbody>
+                </table>
+                <?php } ?>
                 <table class="sui-table table-bordered table-primary">
                     <thead>
                         <tr>
@@ -1757,13 +1883,13 @@ if(filter_input(INPUT_GET, 'act') == 'rt' && $is_constantly)
                                             <td class="text-center test-td">
                                                 <div class="input-prepend input-append">
                                                     <span class="add-on">主机</span>
-                                                    <input class="input-xfat" id="inputHost" name="host" value="localhost" placeholder="主机" type="text">
+                                                    <input class="input-xfat input-large" id="inputHost" name="host" value="localhost" placeholder="主机" type="text">
                                                     <span class="add-on">端口</span>
-                                                    <input class="input-xfat" id="inputPort" name="port" value="3306" placeholder="端口" type="text">
+                                                    <input class="input-xfat input-large" id="inputPort" name="port" value="3306" placeholder="端口" type="text">
                                                     <span class="add-on">用户名</span>
-                                                    <input class="input-xfat" id="inputUser" name="user" placeholder="用户名" type="text">
+                                                    <input class="input-xfat input-large" id="inputUser" name="user" placeholder="用户名" type="text">
                                                     <span class="add-on">密码</span>
-                                                    <input class="input-xfat" id="inputPwd" name="pwd" placeholder="密码" type="text">
+                                                    <input class="input-xfat input-large" id="inputPwd" name="pwd" placeholder="密码" type="text">
                                                 </div>
                                             </td>
                                             <td class="text-center">
