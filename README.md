@@ -1,6 +1,6 @@
 # phpprobe
 phpprobe探针  
-当前版本v1.3  
+当前版本v1.3.1  
   
 程序功能：探测web服务器运行环境  
 程序开发：浪子不归（fbcha or shooter）  
@@ -22,7 +22,11 @@ Git@OSC: http://git.oschina.net/fbcha/phpprobe/releases
 ChinaZ：http://down.chinaz.com/soft/38362.htm  
   
 更新记录：  
-2016-11-24
+2016-12-18  
+V1.3.1  
+1、增加网络使用状况（linux）  
+
+2016-11-24  
 V1.3  
 1、增加服务器性能测试  
 2、增加数据库连接检测  
