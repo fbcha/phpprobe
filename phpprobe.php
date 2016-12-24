@@ -180,6 +180,7 @@ switch (PHP_OS)
         break;
     case "FreeBSD":
         $svrShow = (false !== $is_constantly) ? ((false !== ($svrInfo = svr_freebsd())) ? "show" : "none") : "none";
+        $svrInfo = freebsd_Network();
         break;
     case "Darwin":
         $svrShow = (false !== $is_constantly) ? ((false !== ($svrInfo = svr_darwin())) ? "show" : "none") : "none";
@@ -655,13 +656,72 @@ function darwin_Network()
         $buf = preg_split("/\s+/", $net, 10);
         if (!empty($buf[0]))
         {
-            $_net[$buf[0]]['name'] = trim($buf[0]);
-            $_net[$buf[0]]['rxbytes'] = netSize($buf[5]);
-            $_net[$buf[0]]['txbytes'] = netSize($buf[8]);
-            $_net[$buf[0]]['rxspeed'] = $buf[5];
-            $_net[$buf[0]]['txspeed'] = $buf[8];
-            $_net[$buf[0]]['errors'] = $buf[4] + $buf[7];
-            $_net[$buf[0]]['drops'] = isset($buf[10]) ? $buf[10] : "NULL";
+            $dev_name = trim($buf[0]);
+            $_net[$dev_name]['name'] = $dev_name;
+            $_net[$dev_name]['rxbytes'] = netSize($buf[5]);
+            $_net[$dev_name]['txbytes'] = netSize($buf[8]);
+            $_net[$dev_name]['rxspeed'] = $buf[5];
+            $_net[$dev_name]['txspeed'] = $buf[8];
+            $_net[$dev_name]['errors'] = $buf[4] + $buf[7];
+            $_net[$dev_name]['drops'] = isset($buf[10]) ? $buf[10] : "NULL";
+        }
+    }
+    $res['net'] = $_net;
+    return $res;
+}
+// freebsd
+function freebsd_Network()
+{
+    $netstat = getCommand("-nibd", "netstat");
+    $res['nBool'] = $netstat ? true : false;
+    $nets = preg_split("/\n/", $netstat, -1, PREG_SPLIT_NO_EMPTY);
+    $_net = [];
+    foreach ($nets as $net)
+    {
+        $buf = preg_split("/\s+/", $net);
+        if (!empty($buf[0]))
+        {
+            if (preg_match('/^<Link/i', $buf[2]))
+            {
+                $dev_name = trim($buf[0]);
+                $_net[$dev_name]['name'] = $dev_name;
+                if (strlen($buf[3]) < 17)
+                {
+                    if (isset($buf[11]) && (trim($buf[11]) != ''))
+                    {
+                        $_net[$dev_name]['rxbytes'] = netSize($buf[6]);
+                        $_net[$dev_name]['txbytes'] = netSize($buf[9]);
+                        $_net[$dev_name]['rxspeed'] = $buf[6];
+                        $_net[$dev_name]['txspeed'] = $buf[9];
+                        $_net[$dev_name]['errors'] = $buf[4] + $buf[8];
+                        $_net[$dev_name]['drops'] = $buf[11] + $buf[5];
+                    }else{
+                        $_net[$dev_name]['rxbytes'] = netSize($buf[5]);
+                        $_net[$dev_name]['txbytes'] = netSize($buf[8]);
+                        $_net[$dev_name]['rxspeed'] = $buf[5];
+                        $_net[$dev_name]['txspeed'] = $buf[8];
+                        $_net[$dev_name]['errors'] = $buf[4] + $buf[7];
+                        $_net[$dev_name]['drops'] = $buf[10];
+                    }
+                }else{
+                    if (isset($buf[12]) && (trim($buf[12]) != ''))
+                    {
+                        $_net[$dev_name]['rxbytes'] = netSize($buf[7]);
+                        $_net[$dev_name]['txbytes'] = netSize($buf[10]);
+                        $_net[$dev_name]['rxspeed'] = $buf[7];
+                        $_net[$dev_name]['txspeed'] = $buf[10];
+                        $_net[$dev_name]['errors'] = $buf[5] + $buf[9];
+                        $_net[$dev_name]['drops'] = $buf[12] + $buf[6];
+                    }else{
+                        $_net[$dev_name]['rxbytes'] = netSize($buf[6]);
+                        $_net[$dev_name]['txbytes'] = netSize($buf[9]);
+                        $_net[$dev_name]['rxspeed'] = $buf[6];
+                        $_net[$dev_name]['txspeed'] = $buf[9];
+                        $_net[$dev_name]['errors'] = $buf[5] + $buf[8];
+                        $_net[$dev_name]['drops'] = $buf[11];
+                    }
+                }
+            }
         }
     }
     $res['net'] = $_net;
