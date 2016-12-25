@@ -5,17 +5,17 @@
  * 程序开发: 浪子不归(fbcha)
  * 联系方式: fbcha@163.com
  * 项目主页: https://github.com/fbcha/phpprobe
- * 博   客: https://my.oschina.net/fbcha/blog
+ * 博   客: https://zerosn.com
  * Date: 2016-09-18
- * Update: 2016-12-18
+ * Update: 2016-12-25
  */
 error_reporting(0);
 $title = "PHPProbe探针 ";
 $name = "PHPProbe探针 ";
 $downUrl = "https://github.com/fbcha/phpprobe";
-$version = "v1.3.1";
+$version = "v1.4";
 
-$is_constantly = false; // 是否开启实时信息, false - 关闭, true - 开启
+$is_constantly = true; // 是否开启实时信息, false - 关闭, true - 开启
 
 date_default_timezone_set("Asia/Shanghai"); 
 
