@@ -15,7 +15,7 @@ $name = "PHPProbe探针 ";
 $downUrl = "https://github.com/fbcha/phpprobe";
 $version = "v1.3.1";
 
-$is_constantly = true; // 是否开启实时信息, false - 关闭, true - 开启
+$is_constantly = false; // 是否开启实时信息, false - 关闭, true - 开启
 
 date_default_timezone_set("Asia/Shanghai"); 
 
@@ -176,12 +176,15 @@ switch (PHP_OS)
 {
     case "Linux":
         $svrShow = (false !== $is_constantly) ? ((false !== ($svrInfo = svr_linux())) ? "show" : "none") : "none";
+        $svrInfo = linux_Network();
         break;
     case "FreeBSD":
         $svrShow = (false !== $is_constantly) ? ((false !== ($svrInfo = svr_freebsd())) ? "show" : "none") : "none";
+        $svrInfo = freebsd_Network();
         break;
     case "Darwin":
         $svrShow = (false !== $is_constantly) ? ((false !== ($svrInfo = svr_darwin())) ? "show" : "none") : "none";
+        $svrInfo = darwin_Network();
         break;
     case "WINNT":
         $is_constantly = false;
@@ -616,17 +619,19 @@ function size_format($bytes, $decimals = 2)
     return false;
 }
 // 网络流量
-function getNetwork()
+// linux
+function linux_Network()
 {
     $net = [];
-    $netstr = file_get_contents('/proc/net/dev');
-    $res['nBool'] = $netstr ? true : false;
-    $bufe = preg_split("/\n/", $netstr, -1, PREG_SPLIT_NO_EMPTY);
+    $netstat = file_get_contents('/proc/net/dev');
+    $res['nBool'] = $netstat ? true : false;
+    $bufe = preg_split("/\n/", $netstat, -1, PREG_SPLIT_NO_EMPTY);
     foreach ($bufe as $buf) {
         if (preg_match('/:/', $buf)) {
             list($dev_name, $stats_list) = preg_split('/:/', $buf, 2);
+            $dev_name = trim($dev_name);
             $stats = preg_split('/\s+/', trim($stats_list));
-            $net[$dev_name]['name'] = trim($dev_name);
+            $net[$dev_name]['name'] = $dev_name;
             $net[$dev_name]['rxbytes'] = netSize($stats[0]);
             $net[$dev_name]['txbytes'] = netSize($stats[8]);
             $net[$dev_name]['rxspeed'] = $stats[0];
@@ -637,6 +642,89 @@ function getNetwork()
     }
     $res['net'] = $net;
 
+    return $res;
+}
+// darwin
+function darwin_Network()
+{
+    $netstat = getCommand("-nbdi | cut -c1-24,42- | grep Link", "netstat");
+    $res['nBool'] = $netstat ? true : false;
+    $nets = preg_split("/\n/", $netstat, -1, PREG_SPLIT_NO_EMPTY);
+    $_net = [];
+    foreach ($nets as $net)
+    {
+        $buf = preg_split("/\s+/", $net, 10);
+        if (!empty($buf[0]))
+        {
+            $dev_name = trim($buf[0]);
+            $_net[$dev_name]['name'] = $dev_name;
+            $_net[$dev_name]['rxbytes'] = netSize($buf[5]);
+            $_net[$dev_name]['txbytes'] = netSize($buf[8]);
+            $_net[$dev_name]['rxspeed'] = $buf[5];
+            $_net[$dev_name]['txspeed'] = $buf[8];
+            $_net[$dev_name]['errors'] = $buf[4] + $buf[7];
+            $_net[$dev_name]['drops'] = isset($buf[10]) ? $buf[10] : "NULL";
+        }
+    }
+    $res['net'] = $_net;
+    return $res;
+}
+// freebsd
+function freebsd_Network()
+{
+    $netstat = getCommand("-nibd", "netstat");
+    $res['nBool'] = $netstat ? true : false;
+    $nets = preg_split("/\n/", $netstat, -1, PREG_SPLIT_NO_EMPTY);
+    $_net = [];
+    foreach ($nets as $net)
+    {
+        $buf = preg_split("/\s+/", $net);
+        if (!empty($buf[0]))
+        {
+            if (preg_match('/^<Link/i', $buf[2]))
+            {
+                $dev_name = trim($buf[0]);
+                $_net[$dev_name]['name'] = $dev_name;
+                if (strlen($buf[3]) < 17)
+                {
+                    if (isset($buf[11]) && (trim($buf[11]) != ''))
+                    {
+                        $_net[$dev_name]['rxbytes'] = netSize($buf[6]);
+                        $_net[$dev_name]['txbytes'] = netSize($buf[9]);
+                        $_net[$dev_name]['rxspeed'] = $buf[6];
+                        $_net[$dev_name]['txspeed'] = $buf[9];
+                        $_net[$dev_name]['errors'] = $buf[4] + $buf[8];
+                        $_net[$dev_name]['drops'] = $buf[11] + $buf[5];
+                    }else{
+                        $_net[$dev_name]['rxbytes'] = netSize($buf[5]);
+                        $_net[$dev_name]['txbytes'] = netSize($buf[8]);
+                        $_net[$dev_name]['rxspeed'] = $buf[5];
+                        $_net[$dev_name]['txspeed'] = $buf[8];
+                        $_net[$dev_name]['errors'] = $buf[4] + $buf[7];
+                        $_net[$dev_name]['drops'] = $buf[10];
+                    }
+                }else{
+                    if (isset($buf[12]) && (trim($buf[12]) != ''))
+                    {
+                        $_net[$dev_name]['rxbytes'] = netSize($buf[7]);
+                        $_net[$dev_name]['txbytes'] = netSize($buf[10]);
+                        $_net[$dev_name]['rxspeed'] = $buf[7];
+                        $_net[$dev_name]['txspeed'] = $buf[10];
+                        $_net[$dev_name]['errors'] = $buf[5] + $buf[9];
+                        $_net[$dev_name]['drops'] = $buf[12] + $buf[6];
+                    }else{
+                        $_net[$dev_name]['rxbytes'] = netSize($buf[6]);
+                        $_net[$dev_name]['txbytes'] = netSize($buf[9]);
+                        $_net[$dev_name]['rxspeed'] = $buf[6];
+                        $_net[$dev_name]['txspeed'] = $buf[9];
+                        $_net[$dev_name]['errors'] = $buf[5] + $buf[8];
+                        $_net[$dev_name]['drops'] = $buf[11];
+                    }
+                }
+            }
+        }
+    }
+    $res['net'] = $_net;
     return $res;
 }
 function netSize($size, $decimals = 2)
@@ -795,7 +883,6 @@ if(filter_input(INPUT_GET, 'act') == 'rt' && $is_constantly)
     echo filter_input(INPUT_GET, 'callback') . '(' . $jsonRes . ')';
     exit();
 }
-$svrInfo = getNetwork();
 if(filter_input(INPUT_GET, 'act') == 'ort' && $svrInfo['nBool'])
 {
     $oRes = array(
@@ -1192,7 +1279,7 @@ if(filter_input(INPUT_GET, 'act') == 'ort' && $svrInfo['nBool'])
 
                     <ul class="sui-nav pull-right">
                         <li><a>获取程序:</a></li>
-                        <li><a href="http://zerosn.com" target="_blank">ZeroSN</a></li>
+                        <li><a href="https://zerosn.com" target="_blank">ZeroSN</a></li>
                         <li><a href="https://github.com/fbcha/phpprobe" target="_blank">Github</a></li>
                         <li><a href="https://git.oschina.net/fbcha/phpprobe" target="_blank">Git@OSC</a></li>
                         <li><a href="<?php echo $downUrl; ?>" target="_blank">OSChina</a></li>
@@ -1336,10 +1423,10 @@ if(filter_input(INPUT_GET, 'act') == 'ort' && $svrInfo['nBool'])
                     </thead>
                     <tbody>
                         <tr>
-                            <td class="text-center">设备</td>
-                            <td class="text-center">接收</td>
-                            <td class="text-center">发送</td>
-                            <td class="text-center">错误/丢失</td>
+                            <td class="text-center" width="15%">设备</td>
+                            <td class="text-center" width="35%">接收</td>
+                            <td class="text-center" width="35%">发送</td>
+                            <td class="text-center" width="15%">错误/丢失</td>
                         </tr>
                         <?php foreach($svrInfo['net'] as $key=>$value){ ?>
                         <tr>
