@@ -7,13 +7,13 @@
  * 项目主页: https://github.com/fbcha/phpprobe
  * 博   客: https://zerosn.com
  * Date: 2016-09-18
- * Update: 2016-12-25
+ * Update: 2017-2-13
  */
 error_reporting(0);
 $title = "PHPProbe探针 ";
 $name = "PHPProbe探针 ";
 $downUrl = "https://github.com/fbcha/phpprobe";
-$version = "v1.4";
+$version = "v1.4.1";
 
 $is_constantly = true; // 是否开启实时信息, false - 关闭, true - 开启
 
@@ -176,15 +176,15 @@ switch (PHP_OS)
 {
     case "Linux":
         $svrShow = (false !== $is_constantly) ? ((false !== ($svrInfo = svr_linux())) ? "show" : "none") : "none";
-        $svrInfo = linux_Network();
+        $svrInfo = array_merge($svrInfo, linux_Network());
         break;
     case "FreeBSD":
         $svrShow = (false !== $is_constantly) ? ((false !== ($svrInfo = svr_freebsd())) ? "show" : "none") : "none";
-        $svrInfo = freebsd_Network();
+        $svrInfo = array_merge($svrInfo, freebsd_Network());
         break;
     case "Darwin":
         $svrShow = (false !== $is_constantly) ? ((false !== ($svrInfo = svr_darwin())) ? "show" : "none") : "none";
-        $svrInfo = darwin_Network();
+        $svrInfo = array_merge($svrInfo, darwin_Network());
         break;
     case "WINNT":
         $is_constantly = false;
@@ -298,7 +298,7 @@ function svr_linux()
     $percent = round($time/$total,4);
     $percent = $percent * 100;
     $res['cpu']['percent'] = $percent;
-    
+
     return $res;
 }
 // freebsd
