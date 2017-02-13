@@ -176,15 +176,15 @@ switch (PHP_OS)
 {
     case "Linux":
         $svrShow = (false !== $is_constantly) ? ((false !== ($svrInfo = svr_linux())) ? "show" : "none") : "none";
-        $svrInfo = linux_Network();
+        $svrInfo = array_merge($svrInfo, linux_Network());
         break;
     case "FreeBSD":
         $svrShow = (false !== $is_constantly) ? ((false !== ($svrInfo = svr_freebsd())) ? "show" : "none") : "none";
-        $svrInfo = freebsd_Network();
+        $svrInfo = array_merge($svrInfo, freebsd_Network());
         break;
     case "Darwin":
         $svrShow = (false !== $is_constantly) ? ((false !== ($svrInfo = svr_darwin())) ? "show" : "none") : "none";
-        $svrInfo = darwin_Network();
+        $svrInfo = array_merge($svrInfo, darwin_Network());
         break;
     case "WINNT":
         $is_constantly = false;
@@ -298,7 +298,7 @@ function svr_linux()
     $percent = round($time/$total,4);
     $percent = $percent * 100;
     $res['cpu']['percent'] = $percent;
-    
+
     return $res;
 }
 // freebsd
