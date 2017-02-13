@@ -7,13 +7,13 @@
  * 项目主页: https://github.com/fbcha/phpprobe
  * 博   客: https://zerosn.com
  * Date: 2016-09-18
- * Update: 2016-12-25
+ * Update: 2017-2-13
  */
 error_reporting(0);
 $title = "PHPProbe探针 ";
 $name = "PHPProbe探针 ";
 $downUrl = "https://github.com/fbcha/phpprobe";
-$version = "v1.4";
+$version = "v1.4.1";
 
 $is_constantly = true; // 是否开启实时信息, false - 关闭, true - 开启
 
